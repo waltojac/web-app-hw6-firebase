@@ -233,6 +233,9 @@
         row.appendChild(acCell);
         tab.appendChild(row);
         tab.classList.remove("hideme");
+        //clear table
+        let stab = document.getElementById("searchTable");
+        clearTable(stab);
     });
 
     // Load the table on remove
