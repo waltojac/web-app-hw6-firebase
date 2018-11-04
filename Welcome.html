@@ -1,0 +1,275 @@
+<html lang="en-us">
+<script src="https://www.gstatic.com/firebasejs/5.5.6/firebase.js"></script>
+<script>
+    // Initialize Firebase
+    var config = {
+        apiKey: "AIzaSyDxBMBsUat56PuyBmHwVJwZ-JJrL0-oB1E",
+        authDomain: "webapphw6-af000.firebaseapp.com",
+        databaseURL: "https://webapphw6-af000.firebaseio.com",
+        projectId: "webapphw6-af000",
+        storageBucket: "webapphw6-af000.appspot.com",
+        messagingSenderId: "394802561604"
+    };
+    firebase.initializeApp(config);
+</script>
+
+<head>
+    <link rel="stylesheet" href="stylesheet.css">
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Slab" rel="stylesheet">
+</head>
+
+<body>
+    <h1>Friends Database</h1>
+
+    <div id="tableDiv">
+        <h3>Current Friends List</h3>
+        <table id="mainTable" class="hideme list">
+            <tr class="head">
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Age</th>
+                <th>Action</th>
+            </tr>
+        </table>
+        <button onclick="clearDb()">Clear Entire Database</button>
+    </div>
+
+    <div>
+        <h3>Add a Friend</h3>
+        <table class="form">
+            <tr>
+                <td>Name: </td>
+                <td><input type="text" id="name" pattern="([A-Z]{1}[a-z]*[ ]*){1,3}" required></td>
+            </tr>
+            <tr>
+                <td>Age: </td>
+                <td><input type="text" id="age" pattern="\d{1,2}" required></td>
+            </tr>
+            <tr>
+                <td>Phone: </td>
+                <td><input type="text" id="phone" pattern="(\d{7})|(\d{10})" required></td>
+            </tr>
+            <tr>
+                <td colspan="2"><button value="Submit" id="submit" disabled="true">Submit</button></td>
+            </tr>
+        </table>
+    </div>
+
+    <div id="uploadDiv">
+        <h3>Upload a JSON File</h3>
+        <input id="upload" type="file">
+        <button onclick="processUpload()">Upload</button>
+    </div>
+
+    <div id="searchDiv">
+        <h3>Search for a Friend</h3>
+        <input type="text" name="searchStr" id="search">
+        <input type="submit" value="Search" onclick="doSearch()">
+        <br>
+        <br>
+        <table id="searchTable" class="list">
+            <tr class="head">
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Age</th>
+                <th>Action</th>
+            </tr>
+        </table>
+    </div>
+
+</body>
+
+
+
+<script>
+
+    const name = document.getElementById("name");
+    const age = document.getElementById("age");
+    const phone = document.getElementById("phone");
+    const submit = document.getElementById("submit");
+
+    var isValidAge = false;
+    var isValidName = false;
+    var isValidPhone = false;
+
+
+    name.addEventListener('keyup', function (event) {
+        isValidName = name.checkValidity();
+
+        if (isValidName && isValidAge && isValidPhone) {
+            submit.disabled = false;
+        } else {
+            submit.disabled = true;
+        }
+    });
+
+    age.addEventListener('keyup', function (event) {
+        isValidAge = age.checkValidity();
+
+        if (isValidName && isValidAge && isValidPhone) {
+            submit.disabled = false;
+        } else {
+            submit.disabled = true;
+        }
+    });
+
+    phone.addEventListener('keyup', function (event) {
+        isValidPhone = phone.checkValidity();
+
+        if (isValidName && isValidAge && isValidPhone) {
+            submit.disabled = false;
+        } else {
+            submit.disabled = true;
+        }
+    });
+
+
+    submit.addEventListener('click', function (event) {
+        submitForm();
+    });
+
+    function doSearch() {
+        const str = document.getElementById("search").value;
+        console.log("Search for " + str)
+
+        var ref = firebase.database().ref().child("friends");
+
+        //clear table
+        let tab = document.getElementById("searchTable");
+        clearTable(tab);
+
+        ref.orderByChild("name").on("value", snapshot => {
+            snapshot.forEach(function (data) {
+                var name = String(data.val().name).toLocaleLowerCase();
+
+                //Query modifier
+                if (name.includes(str.toLocaleLowerCase())) {
+                    console.log(data.key);
+                    //fill table
+                    const row = document.createElement("tr");
+                    row.setAttribute("id", data.key)
+                    const nCell = document.createElement("td");
+                    const pCell = document.createElement("td");
+                    const aCell = document.createElement("td");
+                    const acCell = document.createElement("td");
+
+
+                    nCell.innerText = data.val().name;
+                    pCell.innerText = data.val().phone;
+                    aCell.innerText = data.val().age;
+                    acCell.innerHTML = `<button onclick="removeItem('${data.key}')">Delete</button>`
+
+                    row.appendChild(nCell);
+                    row.appendChild(pCell);
+                    row.appendChild(aCell);
+                    row.appendChild(acCell);
+                    tab.appendChild(row);
+                }
+
+            });
+        });
+    }
+
+
+    function submitForm() {
+        console.log("Submit hit.");
+        console.log(name.value + " " + age.value + " " + phone.value);
+
+        var friend = {};
+        friend.name = name.value
+        friend.phone = phone.value
+        friend.age = age.value
+
+        var rootRef = firebase.database().ref();
+        friendRef = rootRef.child("friends");
+        friendRef.push().set(friend);
+
+    }
+
+    function processUpload() {
+        var uploadInfo = document.getElementById("upload");
+        if ("files" in uploadInfo) {
+            var reader = new FileReader();
+            reader.onload = function (event) {
+                var jsonObj = JSON.parse(event.target.result);
+                /* put your code here, whatever you need to do with jsonObj */
+                jsonObj.forEach(element => {
+                    var rootRef = firebase.database().ref();
+                    friendRef = rootRef.child("friends");
+                    friendRef.push().set(element);
+                });
+            };
+
+            /* file is an array and we are interested only in the first element */
+            reader.readAsText(uploadInfo.files[0]);
+        }
+    }
+</script>
+
+
+<script>
+
+    // Load the table on add
+    var tabRef = firebase.database().ref().child("friends");
+    tabRef.on("child_added", snapshot => {
+        let tab = document.getElementById("mainTable");
+        const row = document.createElement("tr");
+        row.setAttribute("id", snapshot.key)
+        const nCell = document.createElement("td");
+        const pCell = document.createElement("td");
+        const aCell = document.createElement("td");
+        const acCell = document.createElement("td");
+
+
+        nCell.innerText = snapshot.val().name;
+        pCell.innerText = snapshot.val().phone;
+        aCell.innerText = snapshot.val().age;
+        acCell.innerHTML = `<button onclick="removeItem('${snapshot.key}')">Delete</button>`
+
+        row.appendChild(nCell);
+        row.appendChild(pCell);
+        row.appendChild(aCell);
+        row.appendChild(acCell);
+        tab.appendChild(row);
+        tab.classList.remove("hideme");
+    });
+
+    // Load the table on remove
+    var tabRef = firebase.database().ref().child("friends");
+    tabRef.on("child_removed", snapshot => {
+        var element = document.getElementById(snapshot.key);
+        element.parentNode.removeChild(element);
+    });
+
+
+    function removeItem(key) {
+        console.log("Delete: " + key);
+        firebase.database().ref().child("friends").child(key).remove(function (error) {
+            if (!error) {
+                console.log("Removed: " + key);
+            }
+        });
+    }
+
+    function clearDb() {
+        firebase.database().ref().child("friends").remove(function (error) {
+            if (!error) {
+                console.log("Wiped DB");
+            }
+        });
+    }
+
+
+    function clearTable(table) {
+        var rows = table.rows;
+        var i = rows.length;
+        while (--i) {
+            table.deleteRow(i);
+        }
+    }
+
+</script>
+
+
+</html>
